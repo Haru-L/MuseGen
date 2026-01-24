@@ -26,23 +26,23 @@ export const KALIMBA_17_KEY_C: KalimbaConfig = {
   keyCount: 17,
   isCustom: false,
   tuning: [
-    createTineConfig(1, 'D4'),  // 最左
-    createTineConfig(2, 'B4'),
-    createTineConfig(3, 'G4'),
-    createTineConfig(4, 'E4'),
-    createTineConfig(5, 'C4'),  // 左侧
+    createTineConfig(1, 'D6'),
+    createTineConfig(2, 'B5'),
+    createTineConfig(3, 'G5'),
+    createTineConfig(4, 'E5'),
+    createTineConfig(5, 'C5'),
     createTineConfig(6, 'A4'),
     createTineConfig(7, 'F4'),
-    createTineConfig(8, 'D5'),
-    createTineConfig(9, 'C5'),  // 中央
-    createTineConfig(10, 'E5'),
-    createTineConfig(11, 'G5'),
-    createTineConfig(12, 'B5'),
-    createTineConfig(13, 'D6'),
-    createTineConfig(14, 'F5'),  // 右侧
+    createTineConfig(8, 'D4'),
+    createTineConfig(9, 'C4'),
+    createTineConfig(10, 'E4'),
+    createTineConfig(11, 'G4'),
+    createTineConfig(12, 'B4'),
+    createTineConfig(13, 'D5'),
+    createTineConfig(14, 'F5'),
     createTineConfig(15, 'A5'),
     createTineConfig(16, 'C6'),
-    createTineConfig(17, 'E6'),  // 最右
+    createTineConfig(17, 'E6'),
   ]
 };
 

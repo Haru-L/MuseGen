@@ -1,18 +1,21 @@
 import { Music } from 'lucide-react';
 import { useUploadStore } from '@/stores/uploadStore'
 import { AudioDropzone } from '@/components/Upload/AudioDropzone'
-import { ProgressBar } from '@/components/Upload/ProgressBar'
 import { useRef } from 'react'
 import { handleFileUpload } from '@/utils/audio'
+import { ProcessingIndicator } from '@/components/ProcessingIndicator'
+import { mapUploadToProcessing } from '@/utils/uploadProgressAdapter'
 
 export function HomePage() {
   const status = useUploadStore(s => s.status)
   const meta = useUploadStore(s => s.meta)
   const error = useUploadStore(s => s.error)
   const progress = useUploadStore(s => s.progress)
+  const file = useUploadStore(s => s.file)
   const cancelParsing = useUploadStore(s => s.cancelParsing)
   const clear = useUploadStore(s => s.clear)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const processing = mapUploadToProcessing({ status, progress, error })
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -29,19 +32,20 @@ export function HomePage() {
         <div className="flex flex-col items-center justify-center py-10 space-y-8">
           <Music className="w-20 h-20 text-primary-500 animate-pulse-slow" />
           <AudioDropzone />
-          {status === 'parsing' && (
-            <div className="w-full md:w-2/3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-600">正在解析音频…</p>
-                <p className="text-sm text-gray-600">{progress ?? 0}%</p>
-              </div>
-              <ProgressBar value={progress} />
-              <div className="mt-3">
-                <button className="btn-secondary" onClick={cancelParsing}>取消解析</button>
-              </div>
-            </div>
+          {processing && (
+            <ProcessingIndicator
+              status={processing.status}
+              progress={processing.progress}
+              error={processing.error}
+              onCancel={processing.status === 'running' ? cancelParsing : undefined}
+              onRetry={
+                processing.status === 'failed'
+                  ? () => { if (file) handleFileUpload(file) }
+                  : undefined
+              }
+            />
           )}
-          {error && (
+          {error && !processing && (
             <p role="alert" className="text-sm text-red-600">{error}</p>
           )}
           {meta && status === 'ready' && (

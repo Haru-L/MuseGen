@@ -43,7 +43,7 @@ export function AudioDropzone() {
         将 MP3 或 WAV 文件拖拽到此处，或点击下方按钮选择文件
       </p>
       <p className="text-xs text-gray-500 mb-6">
-        支持文件类型：MP3、WAV · 大小不超过 20MB · 时长不超过 10 分钟
+        支持文件类型：MP3、WAV · 大小不超过 50MB · 时长不超过 10 分钟
       </p>
       <label className="btn-primary cursor-pointer">
         选择文件

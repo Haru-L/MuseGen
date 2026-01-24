@@ -18,10 +18,7 @@ export function CustomKalimbaBuilder() {
 
   return (
     <div>
-      <div className="text-lg font-semibold text-gray-900">创建自定义配置</div>
-      <p className="text-sm text-gray-600 mt-1">自定义键数与起始音符，然后在下方逐键调整调音。</p>
-
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
           <label className="text-sm text-gray-700">键数（8~30）</label>
           <input

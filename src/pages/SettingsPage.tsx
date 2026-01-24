@@ -5,6 +5,7 @@ import { CustomKalimbaBuilder } from '@/components/SettingsPanel/CustomKalimbaBu
 import { TuningEditor } from '@/components/SettingsPanel/TuningEditor'
 import { KalimbaPreview } from '@/components/SettingsPanel/KalimbaPreview'
 import { PreviewModeToggle } from '@/components/SettingsPanel/PreviewModeToggle'
+import { CollapsiblePanel } from '@/components/SettingsPanel/CollapsiblePanel'
 import type { PreviewMode } from '@/utils/previewNotation'
 
 export function SettingsPage() {
@@ -54,13 +55,23 @@ export function SettingsPage() {
           <PresetSelector />
         </div>
 
-        <div className="card lg:col-span-2">
+        <CollapsiblePanel
+          className="lg:col-span-2"
+          title="创建自定义配置"
+          description="自定义键数与起始音符，然后在下方逐键调整调音。"
+          defaultOpen={false}
+        >
           <CustomKalimbaBuilder />
-        </div>
+        </CollapsiblePanel>
 
-        <div className="card lg:col-span-2">
+        <CollapsiblePanel
+          className="lg:col-span-2"
+          title="调音编辑"
+          description="逐个琴键设置音名。仅自定义配置可编辑。"
+          defaultOpen={true}
+        >
           <TuningEditor />
-        </div>
+        </CollapsiblePanel>
 
         <div className="card lg:col-span-2">
           <div className="flex items-center justify-between gap-4 mb-4">

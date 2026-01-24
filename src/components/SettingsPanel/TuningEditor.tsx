@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { midiToFrequency, noteNameToMidi } from '@/utils/musicTheory'
 import { sortTuningPhysicalLeftToRight } from '@/utils/kalimbaLayout'
-import { KalimbaScalePreview } from './KalimbaScalePreview'
 import type { KalimbaConfig, TineConfig } from '@/types/kalimba.types'
 
 function normalizeNoteName(input: string): string {
@@ -60,12 +59,8 @@ export function TuningEditor() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-lg font-semibold text-gray-900">调音编辑</div>
-          <p className="text-sm text-gray-600 mt-1">逐个琴键设置音名。仅自定义配置可编辑。</p>
-        </div>
-        {!canEdit && (
+      {!canEdit && (
+        <div className="flex justify-end">
           <button
             className="btn-primary"
             onClick={() => {
@@ -76,12 +71,8 @@ export function TuningEditor() {
           >
             复制为自定义并编辑
           </button>
-        )}
-      </div>
-
-      <div className="mt-6 mb-8">
-        <KalimbaScalePreview tuning={currentKalimba.tuning} />
-      </div>
+        </div>
+      )}
 
       <div className="mt-4 overflow-x-auto">
         <table className="min-w-full text-sm">

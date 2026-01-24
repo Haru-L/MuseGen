@@ -27,16 +27,18 @@
 
 - Vite + React 18 + TypeScript：已初始化完成（见 `package.json`）。
 - Tailwind：已接入并有 Mint/Lovable 风格的基础组件样式（`src/index.css`、`tailwind.config.js`）。
-- 路由：已接入 `react-router-dom`，存在 `Layout` 与 `HomePage`（`src/components/Layout/index.tsx`、`src/pages/HomePage.tsx`）。
+- 路由：已接入 `react-router-dom`，存在 `Layout`、`HomePage`、`SettingsPage`（`src/components/Layout/index.tsx`、`src/pages/HomePage.tsx`、`src/pages/SettingsPage.tsx`）。
 - 核心类型：已有 `kalimba.types.ts` 与 `score.types.ts`（见 `src/types/`）。
 - 卡林巴预设与自定义模型：已有 17/21 键预设、`createCustomKalimba`、`validateKalimbaConfig`（`src/utils/kalimbaPresets.ts`）。
 - 设置状态管理：已有 `useSettingsStore`（Zustand + persist，当前落到 LocalStorage）（`src/stores/settingsStore.ts`）。
-- 单元测试框架：Vitest + Testing Library 已接入，并有 `settingsStore` 测试（`src/test/settingsStore.test.ts`）。
+- 设置页面核心 UI：预设选择、自定义创建、调音编辑、预览模式切换、配置预览（`src/components/SettingsPanel/*` + `src/pages/SettingsPage.tsx`）。
+- 物理键位顺序：已实现 `sortTuningPhysicalLeftToRight` 并用于调音编辑/预览（`src/utils/kalimbaLayout.ts`）。
+- 配置预览增强：预览已升级为 SVG 音阶示意图（可缩放），并支持点击琴键试听（Tone.js 动态加载）。
+- 交互组织：创建自定义配置 / 调音编辑 已改为折叠面板（可展开/收起）。
+- 单元测试框架：Vitest + Testing Library 已接入，覆盖 `settingsStore`、工具函数与预览组件（`src/test/*`）。
 
 ### 2.2 当前明显缺口/风险点
 
-- `App.tsx` 引用了 `SettingsPage`（`src/pages/SettingsPage`），但仓库中缺少对应文件，当前项目理论上无法通过构建/运行。
-- “设置 UI”（预设选择、自定义调音编辑器等）尚未实现，当前仅有 store 与工具函数。
 - Phase 1 计划要求“统一使用 IndexedDB 存储（设置/预设）”，但当前设置与上传信息均使用 `zustand/persist` 的 LocalStorage。
 - 上传限制与计划不一致：当前最大文件 `20MB`（`src/utils/audio.ts`），计划为 `50MB`。
 
@@ -46,9 +48,9 @@
 |---|---|---|---|
 | 1) 初始化项目 | Vite + React + TS | ✅ 已完成 | `package.json`、`vite.config.ts` |
 | 2) 配置 Tailwind | Tailwind CSS | ✅ 已完成 | `tailwind.config.js`、`postcss.config.js`、`src/index.css` |
-| 3) 基础组件结构与路由 | 基础页面骨架 | ⚠️ 部分完成 | 有 `Layout`/`HomePage`，但 `SettingsPage` 缺失导致路由不可用 |
+| 3) 基础组件结构与路由 | 基础页面骨架 | ✅ 已完成 | `Layout`/`HomePage`/`SettingsPage` 已就绪并可访问 |
 | 4) 定义核心 TS 类型 | `score.types.ts` / `kalimba.types.ts` | ✅ 已完成（可优化） | 类型已存在；与 `plan.md` 中 `KalimbaScoreSet` 结构略有不同（后续 Phase 可统一） |
-| 5) 卡林巴设置页面 | 预设/自定义/编辑/持久化/状态管理 | ⚠️ 部分完成 | 预设/校验/Store 完成；UI 与 IndexedDB 持久化未实现 |
+| 5) 卡林巴设置页面 | 预设/自定义/编辑/持久化/状态管理 | ✅ 已完成（仍有差异） | 预设/自定义/编辑/预览与 LocalStorage 持久化已完成；IndexedDB 仍未按计划落地 |
 
 ## 4. Phase 1 详细实现方案（从当前仓库继续推进）
 
@@ -158,7 +160,7 @@
 - 目标：刷新/重开页面可恢复 `currentKalimba` 与 `customKalimbas`
 - 约束：尽量不引入重量级依赖；可使用原生 IndexedDB 或轻量库（如 `idb`）
 
-#### 4.3.2 存储模型（建议）
+#### 4.3.2 存储模型
 
 数据库：`musegen`
 
@@ -167,29 +169,17 @@
   - value: `{ key: 'settings', currentKalimbaId: string, currentKalimbaSnapshot?: KalimbaConfig, customKalimbas: KalimbaConfig[], version: number, updatedAt: number }`
 
 说明：
-- 方案 A（推荐）：存 `currentKalimbaSnapshot`（快照），避免“当前配置指向一个已被删除的自定义项”产生歧义。
-- 方案 B：只存 `currentKalimbaId`，加载时先从 presets/custom 中 resolve；找不到则回退默认。
+- 方案：存 `currentKalimbaSnapshot`（快照），避免“当前配置指向一个已被删除的自定义项”产生歧义。
 
-#### 4.3.3 与 `useSettingsStore` 的集成方式（建议）
+#### 4.3.3 与 `useSettingsStore` 的集成方式
 
-两种落地路径，按工程侵入度从低到高：
-
-- 路径 1（低侵入）：保留 Zustand store 结构，在应用启动时“hydration”
-  - `main.tsx` 或 `App.tsx` 启动后：从 IndexedDB 读取 settings，调用 store actions 写入
-  - store 每次变更时（订阅）：写回 IndexedDB
-  - 逐步移除 `persist` 中间件（避免双存储不一致）
-
-- 路径 2（中侵入）：将 settings 的持久化抽象为 `SettingsRepository`
+- 将 settings 的持久化抽象为 `SettingsRepository` + `DatabaseService`
   - store actions 内部调用 repository 保存
   - 优点：更清晰的边界与可测性
 
-Phase 1 建议采用路径 1，Phase 7 再统一升级为 repository + `DatabaseService`。
+#### 4.3.4 迁移策略
 
-#### 4.3.4 迁移策略（避免丢数据）
-
-- 第一次引入 IndexedDB 时：
-  - 读取 LocalStorage `musegen-settings`（现有 persist key），如果存在且 IndexedDB 为空，则迁移一次
-  - 迁移成功后保留 LocalStorage 一段时间作为兜底（或直接清理，取决于风险偏好）
+- 直接清理 LocalStorage 数据
 
 ### 4.4 类型与命名一致性（Phase 1 收敛到“设置域最小闭环”）
 
@@ -200,7 +190,7 @@ Phase 1 建议采用路径 1，Phase 7 再统一升级为 repository + `Database
 
 ### 4.5 测试与验收用例（Phase 1 应补齐的测试）
 
-已有：`settingsStore` 的基础单测。
+已有：`settingsStore` / `uploadStore` / `musicTheory` / `previewNotation` / `kalimbaLayout` / `kalimbaPreview` 的基础测试（`src/test/*`）。
 
 建议新增（Phase 1 范围内）：
 
@@ -211,7 +201,6 @@ Phase 1 建议采用路径 1，Phase 7 再统一升级为 repository + `Database
   - 配置预览：切换 `1`/`C`/`哆` 模式会更新预览文本，且不修改 store 中的 `tuning`
 - 持久化测试（如果 Phase 1 引入 IndexedDB）：
   - 启动时能从 DB 恢复设置
-  - 迁移逻辑：LocalStorage 有数据、DB 为空时会迁移并能读回
 
 ## 5. 当前进展与未完成内容（按优先级）
 
@@ -221,16 +210,19 @@ Phase 1 建议采用路径 1，Phase 7 再统一升级为 repository + `Database
 - 设置 store：`src/stores/settingsStore.ts`
 - Mint/Lovable 全局样式：`src/index.css`、`tailwind.config.js`
 - Layout / Home 基础页面：`src/components/Layout/index.tsx`、`src/pages/HomePage.tsx`
+- Settings 页面与核心 UI：`src/pages/SettingsPage.tsx`、`src/components/SettingsPanel/*`
+- 配置预览：SVG 音阶示意图 + 预览模式切换（`1`/`C`/`哆`），并支持点击琴键试听
+- 物理键位顺序：`src/utils/kalimbaLayout.ts`（用于调音编辑与预览）
+- 交互组织：折叠面板用于“创建自定义配置/调音编辑”模块
+- 测试：Vitest 用例已覆盖 store / 工具函数 / 预览组件（`src/test/*`）
 
 ### 5.2 未完成（阻塞项）
 
-- 缺少 `src/pages/SettingsPage.tsx`（当前路由引用但文件不存在）
+- 无明显阻塞项（路由闭环与设置页已可运行）
 
 ### 5.3 未完成（Phase 1 核心功能）
 
-- 设置 UI：预设选择器、自定义创建器、调音编辑器、配置预览（`1`/`C`/`哆`）等组件
-- IndexedDB 持久化（至少覆盖设置域），以及从 LocalStorage 的迁移策略
-- 配置编辑的用户体验细节：校验提示、复制预设为自定义、恢复默认等
+- IndexedDB 持久化（至少覆盖设置域）
 
 ### 5.4 与计划不一致点（建议在 Phase 1 内顺手修正或记录）
 
@@ -239,6 +231,6 @@ Phase 1 建议采用路径 1，Phase 7 再统一升级为 repository + `Database
 
 ## 6. 里程碑拆分（建议 2~3 天可验收的粒度）
 
-- M1：补齐 `SettingsPage`，项目可运行且路由闭环（不含设置编辑 UI）
-- M2：完成设置 UI（预设切换 + 自定义创建 + 调音编辑 + 配置预览 + 校验）
-- M3：引入 IndexedDB（设置域）并完成本地迁移与恢复
+- M1：补齐 `SettingsPage`，项目可运行且路由闭环（不含设置编辑 UI）✅
+- M2：完成设置 UI（预设切换 + 自定义创建 + 调音编辑 + 配置预览 + 校验）✅
+- M3：引入 IndexedDB（设置域）

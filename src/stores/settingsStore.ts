@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { KalimbaConfig } from '@/types/kalimba.types';
 import { getDefaultKalimba, validateKalimbaConfig } from '@/utils/kalimbaPresets';
+import { zustandIdbStorage } from '@/utils/zustandIdbStorage';
 
 interface SettingsState {
   // 当前使用的卡林巴配置
@@ -125,6 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'musegen-settings',
+      storage: createJSONStorage(() => zustandIdbStorage),
       version: 1
     }
   )

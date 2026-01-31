@@ -2,7 +2,6 @@ import { Music } from 'lucide-react';
 import { useUploadStore } from '@/stores/uploadStore'
 import { AudioDropzone } from '@/components/Upload/AudioDropzone'
 import { useRef } from 'react'
-import { handleFileUpload } from '@/utils/audio'
 import { ProcessingIndicator } from '@/components/ProcessingIndicator'
 import { mapUploadToProcessing } from '@/utils/uploadProgressAdapter'
 
@@ -12,8 +11,9 @@ export function HomePage() {
   const error = useUploadStore(s => s.error)
   const progress = useUploadStore(s => s.progress)
   const file = useUploadStore(s => s.file)
-  const cancelParsing = useUploadStore(s => s.cancelParsing)
-  const clear = useUploadStore(s => s.clear)
+  const cancelUpload = useUploadStore(s => s.cancelUpload)
+  const startUpload = useUploadStore(s => s.startUpload)
+  const reset = useUploadStore(s => s.reset)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const processing = mapUploadToProcessing({ status, progress, error })
 
@@ -37,10 +37,10 @@ export function HomePage() {
               status={processing.status}
               progress={processing.progress}
               error={processing.error}
-              onCancel={processing.status === 'running' ? cancelParsing : undefined}
+              onCancel={processing.status === 'running' ? cancelUpload : undefined}
               onRetry={
                 processing.status === 'failed'
-                  ? () => { if (file) handleFileUpload(file) }
+                  ? () => { if (file) startUpload(file) }
                   : undefined
               }
             />
@@ -60,7 +60,7 @@ export function HomePage() {
               <div className="mt-4 flex items-center gap-3">
                 <a href="/settings" className="btn-primary">开始生成（配置检查）</a>
                 <button className="btn-secondary" onClick={() => fileInputRef.current?.click()}>更换文件</button>
-                <button className="btn-secondary" onClick={clear}>清除文件</button>
+                <button className="btn-secondary" onClick={reset}>清除文件</button>
               </div>
               <input
                 ref={fileInputRef}
@@ -69,7 +69,7 @@ export function HomePage() {
                 className="sr-only"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
-                  if (file) handleFileUpload(file)
+                  if (file) startUpload(file)
                 }}
               />
             </div>

@@ -25,7 +25,7 @@ interface SettingsState {
 
 /**
  * 设置状态管理
- * 使用 Zustand + persist 中间件持久化到 LocalStorage
+ * 使用 Zustand + persist 中间件持久化到 IndexedDB
  */
 export const useSettingsStore = create<SettingsState>()(
   persist(

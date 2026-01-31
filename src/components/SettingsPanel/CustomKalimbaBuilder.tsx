@@ -50,8 +50,9 @@ export function CustomKalimbaBuilder() {
               const custom = createCustomKalimba(keyCount, startMidi)
               addCustomKalimba(custom)
               setCurrentKalimba(custom)
-            } catch (e: any) {
-              setError(e?.message ?? '创建失败')
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : '创建失败'
+              setError(msg)
             }
           }}
         >

@@ -92,12 +92,13 @@ export const useUploadStore = create<UploadState>()(
             audioBuffer: result.audioBuffer,
             progress: 100 
           })
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const err = error as { message?: string; code?: string }
           // If canceled, status is already handled or we should reset
-          if (error.message === 'Canceled' || error.code === 'CANCELED') {
+          if (err.message === 'Canceled' || err.code === 'CANCELED') {
             set({ status: 'idle', file: null, meta: null, progress: undefined })
           } else {
-            set({ status: 'error', error: error.message || '解析失败' })
+            set({ status: 'error', error: err.message || '解析失败' })
           }
         } finally {
           unsubscribe()

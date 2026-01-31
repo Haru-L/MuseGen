@@ -1,6 +1,7 @@
 type ToneModule = typeof import('tone')
 
 let tone: ToneModule | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let synth: any | null = null
 let isStarted = false
 

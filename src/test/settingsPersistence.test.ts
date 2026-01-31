@@ -19,13 +19,14 @@ async function waitFor<T>(fn: () => Promise<T>, predicate: (v: T) => boolean) {
 
 describe('settingsStore persistence (IndexedDB)', () => {
   beforeEach(async () => {
-    try { localStorage.clear() } catch {}
+    try { localStorage.clear() } catch { /* ignore */ }
     await idbDel('musegen-settings')
     vi.resetModules()
   })
 
   it('rehydrates state from IndexedDB', async () => {
     const mod1 = await import('@/stores/settingsStore')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const store1 = mod1.useSettingsStore as any
     if (store1.persist?.rehydrate) {
       await store1.persist.rehydrate()
@@ -41,6 +42,7 @@ describe('settingsStore persistence (IndexedDB)', () => {
 
     vi.resetModules()
     const mod2 = await import('@/stores/settingsStore')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const store2 = mod2.useSettingsStore as any
     if (store2.persist?.rehydrate) {
       await store2.persist.rehydrate()
@@ -48,6 +50,7 @@ describe('settingsStore persistence (IndexedDB)', () => {
 
     const state2 = store2.getState()
     expect(state2.currentKalimba.id).toBe(custom.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(state2.customKalimbas.some((k: any) => k.id === custom.id)).toBe(true)
   })
 })

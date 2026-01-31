@@ -12,7 +12,7 @@ type InternalTask<TResult> = {
 }
 
 type ControllerState = {
-  tasks: Record<string, InternalTask<any>>
+  tasks: Record<string, InternalTask<any>> // eslint-disable-line @typescript-eslint/no-explicit-any
   queue: string[]
   runningTaskId: string | null
 }
@@ -89,6 +89,7 @@ export class TaskController {
     const nextTask: InternalTask<any> = {
       ...t,
       status: 'canceled',
+      abortController: null,
     }
 
     this.state = {
@@ -103,7 +104,7 @@ export class TaskController {
 
     try {
       t.abortController?.abort()
-    } catch {}
+    } catch { /* ignore */ }
 
     this.emit({ type: 'status', taskId, status: 'canceled' })
   }
@@ -227,7 +228,7 @@ export class TaskController {
     for (const l of this.listeners) {
       try {
         l(e)
-      } catch {}
+      } catch { /* ignore */ }
     }
   }
 }

@@ -5,6 +5,7 @@ import type { ProgressEvent, TaskStatus } from '@/services/processing/TaskTypes'
 describe('TaskController', () => {
   it('runs a task and emits status + progress events', async () => {
     const controller = new TaskController()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events: Array<{ type: string; payload: any }> = []
 
     const unsubscribe = controller.subscribe((e) => {

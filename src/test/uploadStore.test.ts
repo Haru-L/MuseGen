@@ -23,12 +23,13 @@ describe('uploadStore', () => {
     expect(err).toBeTruthy()
   })
 
-  it('cancelParsing resets state', () => {
+  it('cancelUpload resets state', () => {
     const s = useUploadStore.getState()
-    s.setParsing()
-    s.attachSession(new FileReader(), null as any)
-    s.setProgress(50)
-    s.cancelParsing()
+    // Simulate parsing state
+    useUploadStore.setState({ status: 'parsing', taskId: 'test-task', progress: 50 })
+    
+    s.cancelUpload()
+    
     const st = useUploadStore.getState()
     expect(st.status).toBe('idle')
     expect(st.progress).toBeUndefined()
@@ -36,11 +37,17 @@ describe('uploadStore', () => {
     expect(st.meta).toBeNull()
   })
 
-  it('clear empties file and meta', () => {
+  it('reset empties file and meta', () => {
     const s = useUploadStore.getState()
-    s.setFile(new File(['x'], 'a.mp3', { type: 'audio/mpeg' }))
-    s.setReady({ name: 'a.mp3', type: 'audio/mpeg', size: 1 })
-    s.clear()
+    // Simulate ready state
+    useUploadStore.setState({ 
+      file: new File(['x'], 'a.mp3', { type: 'audio/mpeg' }),
+      meta: { name: 'a.mp3', type: 'audio/mpeg', size: 1 },
+      status: 'ready'
+    })
+    
+    s.reset()
+    
     const st = useUploadStore.getState()
     expect(st.file).toBeNull()
     expect(st.meta).toBeNull()

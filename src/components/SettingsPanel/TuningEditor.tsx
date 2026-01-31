@@ -125,13 +125,15 @@ export function TuningEditor() {
 
                           setDrafts(prev => ({ ...prev, [t.tineNumber]: normalized }))
                           setErrors(prev => {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
                             const { [t.tineNumber]: _, ...rest } = prev
                             return rest
                           })
 
                           updateCustomKalimba(currentKalimba.id, { tuning: nextTuning })
-                        } catch (e: any) {
-                          setErrors(prev => ({ ...prev, [t.tineNumber]: e?.message ?? '音名无效' }))
+                        } catch (e: unknown) {
+                          const msg = e instanceof Error ? e.message : '音名无效'
+                          setErrors(prev => ({ ...prev, [t.tineNumber]: msg }))
                         }
                       }}
                       aria-label={`tine-${t.tineNumber}-note-name`}

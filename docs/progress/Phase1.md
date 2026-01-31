@@ -51,7 +51,7 @@
 | 物理键位排序逻辑 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 实现左右交替布局算法 |
 | **存储与数据** | | | | | |
 | IndexedDB 存储层实现 | <span style="color:red">阻塞</span> | 0% | 前端开发 | 2026-02-01 | <span style="color:red">预警：当前仍使用 LocalStorage，不符合架构要求，需迁移</span> |
-| 上传限制配置调整 | <span style="color:orange">未开始</span> | 0% | 前端开发 | 2026-02-01 | 当前限制为 20MB，需调整为 PRD 要求的 50MB |
+| 上传限制配置调整 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 代码已确认限制为 50MB，符合 PRD 要求 |
 
 ## 4. 交付物清单
 *   [x] **源代码仓库**：包含完整的构建脚本和依赖配置。

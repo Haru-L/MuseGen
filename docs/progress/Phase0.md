@@ -45,7 +45,7 @@ graph TD
 | **3. 统一错误模型** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 定义 TaskError 与 ERROR_CODES，实现错误归一化 |
 | **4. Worker 通信协议定义** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 完成 WorkerProtocol 消息类型定义 |
 | **5. 进度指示器 UI 组件** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Frontend | 实现 ProcessingIndicator，支持取消与重试交互 |
-| **6. 上传流程接入示例** | <span style="color:red">未开始</span> | 0% | 2026-02-01 | Frontend | 需将现有 uploadStore 逻辑迁移至 TaskController (M0.3) |
+| **6. 上传流程接入示例** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Frontend | `UploadTask` 已实现并接入 `TaskController`，Store 与组件已重构 |
 
 ## 4. 交付物清单
 - **核心代码**:
@@ -53,6 +53,7 @@ graph TD
   - `TaskTypes` 类型定义 (协议规范)
   - `ErrorModel` 错误处理工具
   - `WorkerProtocol` 通信协议定义
+  - `UploadTask` 示例任务规范
 - **UI 组件**:
   - `ProcessingIndicator` 组件及测试用例
 - **文档**:
@@ -69,6 +70,5 @@ graph TD
 
 | 风险描述 | 严重程度 | 应对策略 | 状态 |
 | :--- | :--- | :--- | :--- |
-| **现有上传逻辑迁移成本** | 中 | 现有 `uploadStore` 逻辑较复杂，建议作为 Phase 2 的一部分逐步迁移，或在 Phase 0 仅做接口适配层。 | <span style="color:red">预警</span> |
 | **Worker 资源释放不彻底** | 高 | 需在 Phase 3 具体实现 Worker 时，严格遵循 `WorkerProtocol` 的取消信号检查，防止内存泄漏。 | 监控中 |
 | **进度预估 (ETA) 准确性** | 低 | 初期仅作为保留字段，不强制实现精准算法，避免过度设计。 | 已接受 |

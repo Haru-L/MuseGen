@@ -50,7 +50,7 @@
 | 配置可视化预览 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 支持 SVG 渲染与交互 |
 | 物理键位排序逻辑 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 实现左右交替布局算法 |
 | **存储与数据** | | | | | |
-| IndexedDB 存储层实现 | <span style="color:red">阻塞</span> | 0% | 前端开发 | 2026-02-01 | <span style="color:red">预警：当前仍使用 LocalStorage，不符合架构要求，需迁移</span> |
+| IndexedDB 存储层实现 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 已实现基于 IndexedDB 的持久化适配器，并包含从 LocalStorage 的自动迁移逻辑。SettingsStore 和 UploadStore 均已接入。 |
 | 上传限制配置调整 | <span style="color:green">已完成</span> | 100% | 前端开发 | 2026-02-01 | 代码已确认限制为 50MB，符合 PRD 要求 |
 
 ## 4. 交付物清单
@@ -70,5 +70,5 @@
     *   核心业务逻辑测试覆盖率 > 80%。
 
 ## 6. 风险与预警
-*   **存储迁移风险** (高)：目前设置状态使用 `zustand/persist` 默认的 LocalStorage 引擎。迁移到 IndexedDB 需要实现异步 hydration 逻辑，可能会影响应用启动流程和状态同步机制。需尽快安排技术攻关。
+*   **存储迁移风险** (低)：已实现 `zustandIdbStorage` 适配器，包含自动数据迁移逻辑（LocalStorage -> IndexedDB）。测试用例已验证迁移的正确性与异常处理。
 *   **配置兼容性** (中)：自定义配置的数据结构需设计版本控制字段，以应对未来可能的字段变更（如增加“按键颜色”、“材质”等属性），防止数据结构升级导致旧数据无法读取。

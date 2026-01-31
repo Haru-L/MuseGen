@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { zustandIdbStorage } from '@/utils/zustandIdbStorage'
 
 export type UploadStatus = 'idle' | 'dragging' | 'validating' | 'parsing' | 'ready' | 'error'
 
@@ -63,6 +64,8 @@ export const useUploadStore = create<UploadState>()(
     {
       name: 'musegen-upload',
       partialize: (state) => ({ meta: state.meta }), // 仅持久化元数据
+      storage: createJSONStorage(() => zustandIdbStorage),
+      version: 1
     }
   )
 )

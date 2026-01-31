@@ -1,216 +1,74 @@
-# Phase 0：基础设施（任务/进度/取消/错误）（实现方案 + 当前进展对比）
-
-本文档聚焦 `plan/plan.md` 中 **Phase 0: 基础设施（任务/进度/取消/错误）** 的落地方案，并基于当前仓库实现给出进展与差距清单。**不包含任何编码实现**。
-
-## 1. Phase 0 目标与范围
-
-### 1.1 目标（Phase 0 交付物）
-
-- 统一任务状态机：提供可复用的任务控制器（idle/queued/running/succeeded/failed/canceled）。
-- 统一进度事件协议：所有长任务以统一结构上报阶段与百分比，UI 只依赖协议渲染。
-- 支持取消/中断：UI 触发 → 主线程控制器终止 → Worker 尽快停止 → 资源释放。
-- 统一错误模型与错误呈现：区分可恢复/不可恢复，提供稳定的错误码与用户文案口径。
-- 进度指示器 UI：提供可复用的 ProcessingIndicator 组件，后续 Phase 2~6 复用。
-
-### 1.2 非目标（Phase 0 不做）
-
-- 不实现音高检测/节奏分析/三难度生成等业务算法（Phase 3/4 负责）。
-- 不实现 IndexedDB 的乐谱库 CRUD 与音频/中间结果缓存（Phase 7 负责）。
-- 不要求一次性把现有上传解析流程完全重构为"全新架构"；Phase 0 更强调"统一协议与控制面"，允许渐进迁移。
-
-## 2. 当前实现状态概览（仓库快照）
-
-### 2.1 已存在的相关能力（可复用资产）
-
-- **统一任务状态机**：`TaskController` 已实现，支持完整状态流转（idle/queued/running/succeeded/failed/canceled），见 [TaskController.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskController.ts)。
-- **统一进度事件协议**：`ProgressEvent` 类型与 `reportProgress` 回调已定义，见 [TaskTypes.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskTypes.ts)。
-- **Worker 消息协议**：完整的 Worker 消息类型定义（start/cancel/progress/done/error/canceled），见 [WorkerProtocol.ts](file:///d:/Projects/MuseGen/src/services/processing/WorkerProtocol.ts)。
-- **统一错误模型**：`TaskError` 类型与 `ERROR_CODES` 常量已定义，包含 `toTaskError` 转换函数，见 [ErrorModel.ts](file:///d:/Projects/MuseGen/src/services/processing/ErrorModel.ts)。
-- **ProcessingIndicator 组件**：可复用的进度指示器 UI 组件，支持进度显示、取消按钮、错误展示与重试，见 [ProcessingIndicator.tsx](file:///d:/Projects/MuseGen/src/components/ProcessingIndicator/ProcessingIndicator.tsx)。
-- **上传解析的进度与取消（局部）**：`useUploadStore` 已有状态枚举 `idle/dragging/validating/parsing/ready/error`，并提供 `cancelParsing()`（`FileReader.abort()` + `AudioContext.close()`），见 [uploadStore.ts](file:///d:/Projects/MuseGen/src/stores/uploadStore.ts)。
-- **输入校验（与 `plan.md` 约束一致）**：最大 50MB、最大 10 分钟、类型限制（MP3/WAV）已在上传处理逻辑中实现，见 [audio.ts](file:///d:/Projects/MuseGen/src/utils/audio.ts)。
-- **IndexedDB 基础设施**：轻量 KV 封装与 Zustand 存储适配已完成，见 [indexedDbKV.ts](file:///d:/Projects/MuseGen/src/utils/indexedDbKV.ts) 与 [zustandIdbStorage.ts](file:///d:/Projects/MuseGen/src/utils/zustandIdbStorage.ts)。
-
-### 2.2 明显缺口/风险点
-
-- 上传解析流程尚未完全迁移至统一 TaskController 架构（当前仍使用独立的 `useUploadStore` 状态管理）。
-- Worker 侧的实际任务执行器尚未实现（仅定义了消息协议）。
-- `score.types.ts` 已包含"处理状态/阶段进度"的类型草案，但当前未被使用，且与 Phase 0 目标的"任务状态机/进度事件协议"仍存在概念边界需要收敛（见 4.6）。
-
-## 3. Phase 0 计划项对照（计划 vs 当前实现）
-
-| Phase 0 计划项 | 目标描述（来自 plan.md） | 当前状态 | 说明/证据 |
-|---|---|---|---|
-| 1) 统一任务状态机 | idle/queued/running/succeeded/failed/canceled | ✅ 已实现 | [TaskController.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskController.ts) 完整实现 |
-| 2) 统一进度事件协议 | 阶段、百分比、耗时估计 | ✅ 已实现 | [TaskTypes.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskTypes.ts) 定义 ProgressEvent |
-| 3) 支持取消/中断 | UI → Worker 停止 → 资源释放 | ✅ 已实现 | TaskController.cancel() + WorkerProtocol 的 cancel 消息类型 |
-| 4) 统一错误模型与呈现 | 可恢复/不可恢复、统一文案 | ✅ 已实现 | [ErrorModel.ts](file:///d:/Projects/MuseGen/src/services/processing/ErrorModel.ts) 完整定义 |
-| 5) 进度指示器 UI | ProcessingIndicator 复用组件 | ✅ 已实现 | [ProcessingIndicator.tsx](file:///d:/Projects/MuseGen/src/components/ProcessingIndicator/ProcessingIndicator.tsx) |
-
-## 4. Phase 0 详细实现方案（从当前仓库继续推进）
-
-### 4.1 统一任务状态机：TaskController
-
-目标：把"长任务的生命周期管理"从具体业务逻辑里剥离出来，形成可复用的控制面，后续音频分析/生成/导出等都复用同一套能力。
-
-#### 4.1.1 状态与流转
-
-- 状态枚举（严格对应 plan.md）：`idle | queued | running | succeeded | failed |canceled`
-- 推荐流转：
-  - `idle → queued → running → succeeded`
-  - `idle → queued → canceled`
-  - `running → failed`
-  - `running → canceled`
-- 约束：
-  - 默认只允许"同一时刻 1 个主处理任务"运行（音频分析/生成是主任务）；上传解析可视为子任务或独立任务，但也走同一套协议以统一 UI。
-
-#### 4.1.2 控制与订阅接口（建议）
-
-- 创建/排队：`enqueue(taskSpec)` 返回 `taskId`
-- 启动：`run(taskId)` 或 `runLatest()`（根据产品交互选择）
-- 取消：`cancel(taskId)`（幂等）
-- 订阅：`subscribe(listener)`，监听状态变更/进度事件/错误
-- 取消机制：
-  - 主线程用 `AbortController` 作为统一取消信号源
-  - Worker 任务通过消息协议接收 `cancel` 并尽快退出
-
-#### 4.1.3 目录与文件（与 plan.md 对齐）
-
-- `src/services/processing/TaskController.ts` ✅ 已实现
-- `src/services/processing/TaskTypes.ts` ✅ 已实现
-- `src/services/processing/WorkerProtocol.ts` ✅ 已实现
-- `src/services/processing/ErrorModel.ts` ✅ 已实现
-
-### 4.2 统一进度事件协议：ProgressEvents
-
-目标：让所有长任务以统一结构上报进度，避免 UI 与业务逻辑紧耦合、避免每个 Phase 都重新定义"进度如何算"。
-
-#### 4.2.1 建议的进度事件字段
-
-- `taskId: string`
-- `phase: string`：阶段标识（建议从业务流程命名，如 `upload | decode | pitch | map | rhythm | generate | export`）
-- `percent: number`：总体进度（0~100）
-- `stagePercent?: number`：阶段内进度（0~100，可选）
-- `message: string`：面向用户的短文案
-- `etaMs?: number`：预估剩余耗时（可选，Phase 0 先定义字段，不要求全部阶段都提供）
-- `updatedAt: number`：时间戳（用于 UI 去抖/排序）
-
-#### 4.2.2 进度口径建议
-
-- 总体进度：由 TaskController 管理（可按阶段权重折算），UI 不直接推断。
-- 阶段进度：由每个阶段实现者上报，TaskController 只做整合。
-
-### 4.3 取消/中断链路：UI → Controller → Worker → 资源释放
-
-目标：把"取消"的语义与实现统一，避免出现"UI 显示取消了，但 Worker 还在跑/内存没有释放"的不一致。
-
-#### 4.3.1 主线程侧（Controller）
-
-- 调用 `abortController.abort()` 触发取消信号
-- 立刻推送进度事件（例如 message="正在取消…"）并将任务状态设置为 `canceled`（或在文档中明确最终一致性：先提示取消中，最终进入 canceled）
-- 清理资源引用（AudioBuffer、TypedArray、对象缓存等）
-
-#### 4.3.2 Worker 侧（协议与检查点）
-
-- 建议消息协议（示意）：
-  - 主线程 → Worker：`start` / `cancel`
-  - Worker → 主线程：`progress` / `done` / `error` / `canceled`
-- Worker 内部必须在"分块处理点"检查取消标记（例如每 N 帧/每块 FFT 后），并尽快退出。
-
-#### 4.3.3 资源释放清单（必须明确写入）
-
-- `AudioContext` / `OfflineAudioContext`：及时 `close()`
-- `AudioBuffer`：处理后立即解除引用，避免常驻内存
-- Worker：必要时 `terminate()`（作为兜底，避免僵死任务）
-
-### 4.4 统一错误模型与呈现：ErrorModel + UI 策略
-
-目标：错误对用户是稳定可理解的，对开发是可诊断的，同时避免把底层异常直接透传到 UI。
-
-#### 4.4.1 错误字段建议
-
-- `code: string`：稳定错误码
-- `userMessage: string`：面向用户的提示文案（短且可行动）
-- `recoverable: boolean`：是否可恢复（UI 是否提供"重试/更换文件/恢复默认"）
-- `debugMessage?: string`：开发诊断信息（默认不在 UI 显示）
-- `cause?: unknown`：保留原始异常用于日志/调试
-
-#### 4.4.2 建议的错误码（Phase 0 先定口径）
-
-- 文件与解析：`UNSUPPORTED_TYPE` / `FILE_TOO_LARGE` / `DURATION_TOO_LONG` / `READ_FAILED` / `DECODE_FAILED`
-- 任务与并发：`TASK_CONFLICT` / `TASK_TIMEOUT` / `CANCELED`
-- Worker：`WORKER_CRASHED` / `WORKER_PROTOCOL_ERROR`
-- 存储：`IDB_FAILED`（后续 Phase 7 会更系统化）
-
-#### 4.4.3 UI 呈现策略
-
-- 可恢复：显示 `userMessage` + 提供"重试/重新选择文件/清除缓存（后续）"
-- 不可恢复：显示 `userMessage` + 提示刷新页面或降低输入规模
-
-### 4.5 ProcessingIndicator：统一进度指示器组件
-
-目标：把进度展示组件化，后续 Phase 2~6 不再重复实现"进度条 + 取消 + 错误提示"的 UI。
-
-#### 4.5.1 最小功能
-
-- 显示：
-  - 当前阶段文案 `message`
-  - 总体进度条 `percent`
-  - 可选：阶段名、阶段内进度 `stagePercent`
-- 操作：
-  - 取消按钮（触发 TaskController.cancel）
-- 错误态：
-  - 展示错误摘要与可恢复操作（重试/清理）
-
-#### 4.5.2 文件建议（与 plan.md 对齐）
-
-- `src/components/ProcessingIndicator/` ✅ 已实现
-  - `ProcessingIndicator.tsx`
-  - `index.ts`
-
-### 4.6 与现有类型的边界收敛（score.types.ts 的处理状态草案）
-
-当前 [score.types.ts](file:///d:/Projects/MuseGen/src/types/score.types.ts) 已定义 `ProcessingState/StageProgress` 等类型，但 Phase 0 目标更偏"任务控制与事件协议"。建议在 Phase 0 文档中明确边界：
-
-- TaskController/ProgressEvents：解决"任何长任务"的控制与上报（跨域复用）。
-- ProcessingState（如保留）：更偏"音频分析流水线的业务状态"（属于 Phase 2~4 的业务域）。
-- 迁移策略：Phase 0 先落 TaskController 与 ProgressEvents，后续 Phase 再决定是否让 ProcessingState 成为"任务事件的投影视图"。避免 Phase 0 就过早绑定到音频域细节。
-
-## 5. 当前进展与未完成内容（按优先级）
-
-### 5.1 已完成（核心基础设施）
-
-- **统一任务状态机（TaskController）**：完整实现，支持 idle/queued/running/succeeded/failed/canceled 状态流转，见 [TaskController.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskController.ts)。
-- **统一进度事件协议（ProgressEvents）**：`ProgressEvent` 类型定义完整，包含 phase/percent/stagePercent/message/etaMs 等字段，见 [TaskTypes.ts](file:///d:/Projects/MuseGen/src/services/processing/TaskTypes.ts)。
-- **Worker 消息协议**：完整的 Worker 双向消息类型定义（start/cancel/progress/done/error/canceled），见 [WorkerProtocol.ts](file:///d:/Projects/MuseGen/src/services/processing/WorkerProtocol.ts)。
-- **统一错误模型（ErrorModel）**：`TaskError` 类型与 `ERROR_CODES` 常量完整定义，包含 `toTaskError` 转换函数，见 [ErrorModel.ts](file:///d:/Projects/MuseGen/src/services/processing/ErrorModel.ts)。
-- **ProcessingIndicator 组件**：可复用的进度指示器 UI 组件，支持进度条、阶段文案、取消按钮、错误展示与重试，见 [ProcessingIndicator.tsx](file:///d:/Projects/MuseGen/src/components/ProcessingIndicator/ProcessingIndicator.tsx)。
-
-### 5.2 已完成（可复用资产）
-
-- 上传解析的进度与取消（局部）：`useUploadStore` 已有状态枚举 `idle/dragging/validating/parsing/ready/error`，并提供 `cancelParsing()`（`FileReader.abort()` + `AudioContext.close()`），见 [uploadStore.ts](file:///d:/Projects/MuseGen/src/stores/uploadStore.ts)。
-- 输入校验（与 `plan.md` 约束一致）：最大 50MB、最大 10 分钟、类型限制（MP3/WAV）已在上传处理逻辑中实现，见 [audio.ts](file:///d:/Projects/MuseGen/src/utils/audio.ts)。
-- 上传区文案已修正：AudioDropzone 提示文案已统一为 "大小不超过 50MB"，与实际校验一致，见 [AudioDropzone.tsx](file:///d:/Projects/MuseGen/src/components/Upload/AudioDropzone.tsx)。
-- IndexedDB 基础设施已存在（对 Phase 0 非必须，但可作为错误/取消策略的一部分参考）：轻量 KV 封装与 Zustand 存储适配已完成，见 [indexedDbKV.ts](file:///d:/Projects/MuseGen/src/utils/indexedDbKV.ts) 与 [zustandIdbStorage.ts](file:///d:/Projects/MuseGen/src/utils/zustandIdbStorage.ts)。
-
-### 5.3 未完成（Phase 0 后续工作）
-
-- 上传解析流程完全迁移至 TaskController 架构（当前仍使用独立的 `useUploadStore`，建议作为 M0.3 示例接入）。
-- Worker 侧的实际任务执行器实现（当前仅定义了消息协议，具体 Worker 实现为 Phase 3 铺路）。
-- `score.types.ts` 中 `ProcessingState` 与 TaskController 的边界收敛（建议在后续 Phase 中决定是否让 ProcessingState 成为"任务事件的投影视图"）。
-
-### 5.4 差异/风险（已解决）
-
-- ~~上传文案仍写 20MB（与实际校验 50MB 不一致）~~ ✅ **已修复**：AudioDropzone 文案已统一为 50MB，见 [AudioDropzone.tsx](file:///d:/Projects/MuseGen/src/components/Upload/AudioDropzone.tsx) 第46行。
-
-## 6. 里程碑拆分（建议 1~2 天可验收的粒度）
-
-- ✅ **M0.1**：定义任务状态机与 TaskController API（含状态流转约束）—— **已完成**
-- ✅ **M0.2**：定义 ProgressEvents 协议 + ProcessingIndicator 组件的最小 UI —— **已完成**
-- **M0.3**：把"上传解析"作为示例接入统一进度协议（不要求完全重构 store，可作为 TaskController 的使用示例）
-- ✅ **M0.4**：制定 Worker 消息协议与取消检查点规范（为 Phase 3 铺路）—— **已完成**
-
----
-
-**文档更新日期**：2026-01-31
-**状态**：Phase 0 核心基础设施已完成，M0.3（上传解析迁移示例）为可选优化项
+# Phase 0: 基础设施开发规划
+
+## 1. 当前阶段目标
+本阶段旨在构建应用的核心基础设施，为后续的音频处理、乐谱生成和导出功能提供统一的控制平面。核心业务价值在于解耦 UI 交互与后台长任务处理，确保系统具备稳定的任务管理、进度反馈、错误处理和资源释放能力。
+
+**核心目标：**
+- **统一任务控制**：建立标准化的任务状态机，统一管理所有异步长任务（上传、分析、生成）。
+- **标准化协议**：定义统一的进度上报和 Worker 通信协议，消除模块间的耦合。
+- **健壮性保障**：建立分级错误处理模型和可靠的取消/中断机制，防止资源泄漏。
+- **UI 组件化**：沉淀通用的进度指示和状态反馈组件，提升开发效率。
+
+## 2. 设计方案
+
+### 2.1 系统架构
+采用 **控制器模式 (Controller Pattern)** 作为核心架构。`TaskController` 作为单例服务运行在主线程，负责协调 UI 组件与后台任务（Workers）之间的状态同步。
+
+```mermaid
+graph TD
+    UI[UI 组件] <--> Controller[TaskController]
+    Controller <--> State[状态存储 (Zustand)]
+    Controller -- 消息协议 --> Worker[Web Worker]
+    Worker -- 进度/结果 --> Controller
+```
+
+### 2.2 模块划分
+- **任务管理模块**: 负责任务的创建、排队、状态流转（Idle -> Queued -> Running -> Completed/Failed）和生命周期管理。
+- **通信协议模块**: 定义主线程与 Worker 间的标准消息格式（Start, Cancel, Progress, Error）。
+- **错误处理模块**: 提供统一的错误码定义、错误归一化处理和用户友好消息映射。
+- **UI 组件库**: 提供 `ProcessingIndicator` 等复用组件，实现对协议的自动渲染。
+
+### 2.3 核心接口定义 (抽象)
+- **TaskSpec**: 定义任务的可执行逻辑、名称和参数规范。
+- **ProgressEvent**: 标准化进度事件，包含 `phase` (阶段), `percent` (总进度), `message` (用户提示), `eta` (预估时间)。
+- **TaskError**: 标准化错误对象，包含 `code` (错误码), `recoverable` (是否可恢复), `userMessage` (展示文案)。
+
+### 2.4 数据模型
+- **任务状态机**: 严格约束状态流转，确保任务在任意时刻处于确定状态 (`idle`, `queued`, `running`, `succeeded`, `failed`, `canceled`)。
+
+## 3. 开发进度与状态
+
+| 规划项 | 状态 | 进度 | 更新日期 | 负责人 | 备注 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. 统一任务状态机** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 实现 TaskController，支持完整状态流转与订阅机制 |
+| **2. 统一进度事件协议** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 定义 ProgressEvent 类型，覆盖阶段与百分比 |
+| **3. 统一错误模型** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 定义 TaskError 与 ERROR_CODES，实现错误归一化 |
+| **4. Worker 通信协议定义** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 完成 WorkerProtocol 消息类型定义 |
+| **5. 进度指示器 UI 组件** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Frontend | 实现 ProcessingIndicator，支持取消与重试交互 |
+| **6. 上传流程接入示例** | <span style="color:red">未开始</span> | 0% | 2026-02-01 | Frontend | 需将现有 uploadStore 逻辑迁移至 TaskController (M0.3) |
+
+## 4. 交付物清单
+- **核心代码**:
+  - `TaskController` 服务类 (任务调度核心)
+  - `TaskTypes` 类型定义 (协议规范)
+  - `ErrorModel` 错误处理工具
+  - `WorkerProtocol` 通信协议定义
+- **UI 组件**:
+  - `ProcessingIndicator` 组件及测试用例
+- **文档**:
+  - 架构设计文档 (集成在技术规格书中)
+  - 接口使用示例 (单元测试作为示例)
+
+## 5. 验证标准
+- **单元测试覆盖率**: 核心服务 (`TaskController`, `ErrorModel`) 单元测试覆盖率 > 90%。
+- **状态流转测试**: 验证所有合法状态流转路径，确保非法流转被拦截。
+- **取消机制验证**: 模拟长任务执行中触发取消，验证 `AbortSignal` 正确传递且状态最终变更为 `canceled`。
+- **UI 交互验证**: 进度条能平滑跟随事件更新，错误态下正确展示重试/取消按钮。
+
+## 6. 风险项清单
+
+| 风险描述 | 严重程度 | 应对策略 | 状态 |
+| :--- | :--- | :--- | :--- |
+| **现有上传逻辑迁移成本** | 中 | 现有 `uploadStore` 逻辑较复杂，建议作为 Phase 2 的一部分逐步迁移，或在 Phase 0 仅做接口适配层。 | <span style="color:red">预警</span> |
+| **Worker 资源释放不彻底** | 高 | 需在 Phase 3 具体实现 Worker 时，严格遵循 `WorkerProtocol` 的取消信号检查，防止内存泄漏。 | 监控中 |
+| **进度预估 (ETA) 准确性** | 低 | 初期仅作为保留字段，不强制实现精准算法，避免过度设计。 | 已接受 |

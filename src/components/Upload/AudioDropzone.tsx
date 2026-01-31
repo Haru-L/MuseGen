@@ -1,17 +1,17 @@
 import { useCallback } from 'react'
 import { useUploadStore } from '@/stores/uploadStore'
-import { handleFileUpload } from '@/utils/audio'
 
 export function AudioDropzone() {
   const status = useUploadStore(s => s.status)
   const setDragging = useUploadStore(s => s.setDragging)
+  const startUpload = useUploadStore(s => s.startUpload)
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file) handleFileUpload(file)
-  }, [setDragging])
+    if (file) startUpload(file)
+  }, [setDragging, startUpload])
 
   const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -24,8 +24,8 @@ export function AudioDropzone() {
 
   const onSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) handleFileUpload(file)
-  }, [])
+    if (file) startUpload(file)
+  }, [startUpload])
 
   return (
     <div

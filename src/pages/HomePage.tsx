@@ -1,9 +1,12 @@
 import { Music } from 'lucide-react';
 import { useUploadStore } from '@/stores/uploadStore'
 import { AudioDropzone } from '@/components/Upload/AudioDropzone'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { ProcessingIndicator } from '@/components/ProcessingIndicator'
 import { mapUploadToProcessing } from '@/utils/uploadProgressAdapter'
+import { AudioMetadataEditor } from '@/components/AudioMetadata'
+import { getAudioSource, updateAudioSource } from '@/db/audioRepository'
+import type { AudioSource } from '@/db/schema'
 
 export function HomePage() {
   const status = useUploadStore(s => s.status)
@@ -11,11 +14,34 @@ export function HomePage() {
   const error = useUploadStore(s => s.error)
   const progress = useUploadStore(s => s.progress)
   const file = useUploadStore(s => s.file)
+  const audioSourceId = useUploadStore(s => s.audioSourceId)
   const cancelUpload = useUploadStore(s => s.cancelUpload)
   const startUpload = useUploadStore(s => s.startUpload)
   const reset = useUploadStore(s => s.reset)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const processing = mapUploadToProcessing({ status, progress, error })
+
+  // AudioSource 状态
+  const [audioSource, setAudioSource] = useState<AudioSource | null>(null)
+
+  // 当 audioSourceId 变化时加载数据
+  useEffect(() => {
+    if (audioSourceId) {
+      getAudioSource(audioSourceId)
+        .then(setAudioSource)
+        .catch(console.error)
+    } else {
+      setAudioSource(null)
+    }
+  }, [audioSourceId])
+
+  // 处理元数据保存
+  const handleSaveMetadata = async (updates: { title: string }) => {
+    if (audioSourceId) {
+      const updated = await updateAudioSource(audioSourceId, updates)
+      setAudioSource(updated)
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -48,20 +74,23 @@ export function HomePage() {
           {error && !processing && (
             <p role="alert" className="text-sm text-red-600">{error}</p>
           )}
-          {meta && status === 'ready' && (
-            <div className="w-full md:w-2/3 border border-white/60 rounded-2xl p-4 bg-white/70 backdrop-blur-md">
-              <div className="font-medium text-gray-900">{meta.name}</div>
-              <div className="text-sm text-gray-600 mt-1">
-                类型：{meta.type} · 大小：{(meta.size / 1024 / 1024).toFixed(2)}MB
+          {status === 'ready' && (
+            <div className="w-full md:w-2/3 space-y-6">
+              {/* 使用新的元数据编辑器组件 */}
+              <div className="bg-white/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-white/60">
+                <AudioMetadataEditor 
+                  audioSource={audioSource} 
+                  onSave={handleSaveMetadata}
+                />
               </div>
-              <div className="text-sm text-gray-600 mt-1">
-                时长：{meta.duration?.toFixed(2)}s · 采样率：{meta.sampleRate}Hz · 声道：{meta.channels}
-              </div>
-              <div className="mt-4 flex items-center gap-3">
+
+              {/* 操作按钮区域 */}
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <a href="/settings" className="btn-primary">开始生成（配置检查）</a>
                 <button className="btn-secondary" onClick={() => fileInputRef.current?.click()}>更换文件</button>
                 <button className="btn-secondary" onClick={reset}>清除文件</button>
               </div>
+              
               <input
                 ref={fileInputRef}
                 type="file"
@@ -69,7 +98,11 @@ export function HomePage() {
                 className="sr-only"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
-                  if (file) startUpload(file)
+                  if (file) {
+                    startUpload(file)
+                    // 重置 input value，允许重复选择同一文件
+                    e.target.value = ''
+                  }
                 }}
               />
             </div>

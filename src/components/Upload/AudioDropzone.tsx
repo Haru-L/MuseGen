@@ -24,7 +24,11 @@ export function AudioDropzone() {
 
   const onSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) startUpload(file)
+    if (file) {
+      startUpload(file)
+      // 重置 input value，允许重复选择同一文件
+      e.target.value = ''
+    }
   }, [startUpload])
 
   return (

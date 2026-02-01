@@ -6,7 +6,7 @@ import { createUploadTask } from '@/services/processing/specs/UploadTask'
 import { validateFile } from '@/utils/audio'
 import { saveAudio, QuotaExceededError } from '@/db/audioRepository'
 
-export type UploadStatus = 'idle' | 'dragging' | 'validating' | 'parsing' | 'ready' | 'error'
+export type UploadStatus = 'idle' | 'dragging' | 'validating' | 'parsing' | 'saving' | 'ready' | 'error'
 
 export interface AudioMeta {
   name: string
@@ -91,6 +91,7 @@ export const useUploadStore = create<UploadState>()(
           const result = await taskController.run<ReturnType<typeof createUploadTask> extends import('@/services/processing/TaskTypes').TaskSpec<infer R> ? R : never>(taskId)
           
           // 6. Save to IndexedDB
+          set({ status: 'saving' })
           let audioSourceId: string | null = null
           try {
             const audioSource = await saveAudio(file, {

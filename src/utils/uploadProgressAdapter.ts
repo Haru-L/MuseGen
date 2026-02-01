@@ -26,7 +26,9 @@ export function mapUploadToProcessing(input: Input): {
     taskId: UPLOAD_TASK_ID,
     phase: 'upload',
     percent,
-    message: input.status === 'validating' ? '正在校验文件…' : '正在解析音频…',
+    message: input.status === 'validating' ? '正在校验文件…' : 
+             input.status === 'saving' ? '正在保存音频…' :
+             '正在解析音频…',
     updatedAt: now(),
   }
 

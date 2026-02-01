@@ -107,9 +107,26 @@ async function openConnection(): Promise<DbConnection> {
  * 执行数据库迁移
  */
 function performMigration(db: IDBDatabase, oldVersion: number): void {
+  // 版本 0 -> 1：创建 KV store
+  if (oldVersion < 1) {
+    migrateToV1(db)
+  }
+  
   // 版本 1 -> 2：添加音频存储支持
   if (oldVersion < 2) {
     migrateToV2(db)
+  }
+}
+
+/**
+ * 迁移到版本 1：创建 KV store
+ */
+function migrateToV1(db: IDBDatabase): void {
+  console.log('[DB] Migrating to version 1: Creating KV store')
+  
+  if (!db.objectStoreNames.contains(StoreNames.KV)) {
+    db.createObjectStore(StoreNames.KV)
+    console.log('[DB] Created KV store')
   }
 }
 

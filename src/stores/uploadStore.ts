@@ -160,10 +160,21 @@ export const useUploadStore = create<UploadState>()(
       name: 'musegen-upload',
       partialize: (state) => ({ 
         meta: state.meta,
-        audioSourceId: state.audioSourceId 
+        audioSourceId: state.audioSourceId,
+        status: state.status === 'ready' ? 'ready' : undefined
       }),
       storage: createJSONStorage(() => zustandIdbStorage),
-      version: 2 // Increment version due to schema change
+      version: 2, // Increment version due to schema change
+      onRehydrateStorage: (state) => {
+        console.log('[Zustand] Hydration started')
+        return (state, error) => {
+          if (error) {
+            console.log('[Zustand] Hydration failed:', error)
+          } else {
+            console.log('[Zustand] Hydration finished. State:', state)
+          }
+        }
+      }
     }
   )
 )

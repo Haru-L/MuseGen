@@ -1,29 +1,7 @@
-const DB_NAME = 'musegen'
-const DB_VERSION = 1
-const STORE_NAME = 'kv'
+import { getDbConnection } from '@/db/dbManager'
+import { StoreNames } from '@/db/schema'
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      const db = req.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'))
-  })
-}
-
-let dbPromise: Promise<IDBDatabase> | null = null
-
-async function getDb(): Promise<IDBDatabase> {
-  if (!dbPromise) {
-    dbPromise = openDb()
-  }
-  return dbPromise
-}
+const STORE_NAME = StoreNames.KV
 
 function requestToPromise<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -41,7 +19,7 @@ function txDone(tx: IDBTransaction): Promise<void> {
 }
 
 export async function idbGet(key: string): Promise<string | null> {
-  const db = await getDb()
+  const db = await getDbConnection()
   const tx = db.transaction(STORE_NAME, 'readonly')
   const store = tx.objectStore(STORE_NAME)
   const value = await requestToPromise(store.get(key))
@@ -50,7 +28,7 @@ export async function idbGet(key: string): Promise<string | null> {
 }
 
 export async function idbSet(key: string, value: string): Promise<void> {
-  const db = await getDb()
+  const db = await getDbConnection()
   const tx = db.transaction(STORE_NAME, 'readwrite')
   const store = tx.objectStore(STORE_NAME)
   await requestToPromise(store.put(value, key))
@@ -58,10 +36,9 @@ export async function idbSet(key: string, value: string): Promise<void> {
 }
 
 export async function idbDel(key: string): Promise<void> {
-  const db = await getDb()
+  const db = await getDbConnection()
   const tx = db.transaction(STORE_NAME, 'readwrite')
   const store = tx.objectStore(STORE_NAME)
   await requestToPromise(store.delete(key))
   await txDone(tx)
 }
-

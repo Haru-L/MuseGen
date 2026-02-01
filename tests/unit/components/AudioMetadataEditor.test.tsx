@@ -4,11 +4,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { AudioMetadataEditor } from '../AudioMetadataEditor'
+import { AudioMetadataEditor } from '@/components/AudioMetadata/AudioMetadataEditor'
 import type { AudioSource } from '@/db/schema'
 
 // Mock CollapsiblePanel
-vi.mock('../../SettingsPanel/CollapsiblePanel', () => ({
+vi.mock('@/components/SettingsPanel/CollapsiblePanel', () => ({
   CollapsiblePanel: ({ children, title }: { children: React.ReactNode; title: string }) => (
     <div data-testid="collapsible-panel" data-title={title}>
       {children}

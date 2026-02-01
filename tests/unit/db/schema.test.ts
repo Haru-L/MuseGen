@@ -7,7 +7,7 @@ import {
   SchemaVersionHistory,
   type AudioSource,
   type AudioBlob,
-} from '../../db/schema'
+} from '@/db/schema'
 
 describe('DB Schema', () => {
   describe('Configuration', () => {

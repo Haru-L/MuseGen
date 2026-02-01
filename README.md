@@ -64,6 +64,9 @@ npm run preview
 # 运行单元测试
 npm test
 
+# 运行端到端测试
+npm run test:e2e
+
 # 查看覆盖率
 npm run test:coverage
 ```
@@ -73,6 +76,10 @@ npm run test:coverage
 ```
 MuseGen/
 ├── docs/               # 项目文档 (PRD, 规划, 技术规格)
+├── tests/              # 测试目录
+│   ├── unit/           # 单元测试 (components, services, utils, stores)
+│   ├── integration/    # 集成测试
+│   └── e2e/            # 端到端测试 (Playwright)
 ├── src/
 │   ├── components/     # React 组件
 │   ├── services/       # 核心业务逻辑 (音频处理, Worker)

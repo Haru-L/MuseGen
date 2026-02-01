@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useAudioMetadata } from '../useAudioMetadata'
+import { useAudioMetadata } from '@/components/AudioMetadata/useAudioMetadata'
 import type { AudioSource } from '@/db/schema'
 
 // 测试数据

@@ -8,8 +8,8 @@ import {
   getStorageUsage,
   hasEnoughStorage,
   DatabaseError,
-} from '../../db/dbManager'
-import { DB_NAME, DB_VERSION } from '../../db/schema'
+} from '@/db/dbManager'
+import { DB_NAME, DB_VERSION } from '@/db/schema'
 
 // Declare global for TypeScript
 declare const global: typeof globalThis

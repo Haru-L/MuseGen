@@ -12,16 +12,16 @@ import {
   FileTooLargeError,
   AudioNotFoundError,
   AudioRepositoryError,
-} from '../../db/audioRepository'
-import { type AudioSource } from '../../db/schema'
-import * as dbManager from '../../db/dbManager'
+} from '@/db/audioRepository'
+import { type AudioSource } from '@/db/schema'
+import * as dbManager from '@/db/dbManager'
 
 // Declare global for TypeScript
 declare const global: typeof globalThis
 
 // Mock dbManager
-vi.mock('../../db/dbManager', async () => {
-  const actual = await vi.importActual('../../db/dbManager')
+vi.mock('@/db/dbManager', async () => {
+  const actual = await vi.importActual<typeof import('@/db/dbManager')>('@/db/dbManager')
   return {
     ...actual,
     getDbConnection: vi.fn(),

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { zustandIdbStorage } from '../utils/zustandIdbStorage'
-import * as indexedDbKV from '../utils/indexedDbKV'
+import { zustandIdbStorage } from '@/utils/zustandIdbStorage'
+import * as indexedDbKV from '@/utils/indexedDbKV'
 
 // Mock indexedDbKV
-vi.mock('../utils/indexedDbKV', () => ({
+vi.mock('@/utils/indexedDbKV', () => ({
   idbGet: vi.fn(),
   idbSet: vi.fn(),
   idbDel: vi.fn(),

@@ -1,5 +1,9 @@
 # Phase 0: 基础设施开发规划
 
+**版本**: 1.1
+**更新日期**: 2026-02-01
+**状态**: 已完成
+
 ## 1. 当前阶段目标
 本阶段旨在构建应用的核心基础设施，为后续的音频处理、乐谱生成和导出功能提供统一的控制平面。核心业务价值在于解耦 UI 交互与后台长任务处理，确保系统具备稳定的任务管理、进度反馈、错误处理和资源释放能力。
 
@@ -40,12 +44,12 @@ graph TD
 
 | 规划项 | 状态 | 进度 | 更新日期 | 负责人 | 备注 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. 统一任务状态机** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 实现 TaskController，支持完整状态流转与订阅机制 |
-| **2. 统一进度事件协议** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 定义 ProgressEvent 类型，覆盖阶段与百分比 |
-| **3. 统一错误模型** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 定义 TaskError 与 ERROR_CODES，实现错误归一化 |
-| **4. Worker 通信协议定义** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Tech Lead | 完成 WorkerProtocol 消息类型定义 |
-| **5. 进度指示器 UI 组件** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Frontend | 实现 ProcessingIndicator，支持取消与重试交互 |
-| **6. 上传流程接入示例** | <span style="color:green">已完成</span> | 100% | 2026-02-01 | Frontend | `UploadTask` 已实现并接入 `TaskController`，Store 与组件已重构 |
+| **1. 统一任务状态机** | 已完成 | 100% | 2026-02-01 | Tech Lead | 实现 TaskController，支持完整状态流转与订阅机制 |
+| **2. 统一进度事件协议** | 已完成 | 100% | 2026-02-01 | Tech Lead | 定义 ProgressEvent 类型，覆盖阶段与百分比 |
+| **3. 统一错误模型** | 已完成 | 100% | 2026-02-01 | Tech Lead | 定义 TaskError 与 ERROR_CODES，实现错误归一化 |
+| **4. Worker 通信协议定义** | 已完成 | 100% | 2026-02-01 | Tech Lead | 完成 WorkerProtocol 消息类型定义 |
+| **5. 进度指示器 UI 组件** | 已完成 | 100% | 2026-02-01 | Frontend | 实现 ProcessingIndicator，支持取消与重试交互 |
+| **6. 上传流程接入示例** | 已完成 | 100% | 2026-02-01 | Frontend | `UploadTask` 已实现并接入 `TaskController`，Store 与组件已重构 |
 
 ## 4. 交付物清单
 - **核心代码**:

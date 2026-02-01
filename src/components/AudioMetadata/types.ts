@@ -4,6 +4,9 @@
 
 import type { AudioSource } from '@/db/schema'
 
+// Re-export AudioSource for use in other files
+export type { AudioSource }
+
 /**
  * 编辑器状态
  */

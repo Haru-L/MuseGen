@@ -16,6 +16,9 @@ import {
 import { type AudioSource } from '../../db/schema'
 import * as dbManager from '../../db/dbManager'
 
+// Declare global for TypeScript
+declare const global: typeof globalThis
+
 // Mock dbManager
 vi.mock('../../db/dbManager', async () => {
   const actual = await vi.importActual('../../db/dbManager')
@@ -30,30 +33,29 @@ describe('audioRepository', () => {
   let mockDB: any
   let mockTransaction: any
   let mockObjectStore: any
-  let mockRequest: any
   let mockIndex: any
+
+  // Helper to create a fresh mock request
+  const createMockRequest = () => ({
+    onsuccess: null as (() => void) | null,
+    onerror: null as (() => void) | null,
+    result: null as any,
+    error: null as any,
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Setup mock request
-    mockRequest = {
-      onsuccess: null,
-      onerror: null,
-      result: null,
-      error: null,
-    }
-
-    // Setup mock index
+    // Setup mock index with default implementation
     mockIndex = {
-      openCursor: vi.fn().mockReturnValue(mockRequest),
+      openCursor: vi.fn().mockImplementation(() => createMockRequest()),
     }
 
-    // Setup mock object store
+    // Setup mock object store with default implementation
     mockObjectStore = {
-      get: vi.fn().mockReturnValue(mockRequest),
-      put: vi.fn().mockReturnValue(mockRequest),
-      delete: vi.fn().mockReturnValue(mockRequest),
+      get: vi.fn().mockImplementation(() => createMockRequest()),
+      put: vi.fn().mockImplementation(() => createMockRequest()),
+      delete: vi.fn().mockImplementation(() => createMockRequest()),
       index: vi.fn().mockReturnValue(mockIndex),
     }
 
@@ -139,15 +141,15 @@ describe('audioRepository', () => {
         processingStatus: 'pending',
       }
 
-      // Setup mock to trigger onsuccess
       mockObjectStore.get.mockImplementation(() => {
+        const request = createMockRequest()
         setTimeout(() => {
-          if (mockRequest.onsuccess) {
-            mockRequest.result = mockSource
-            mockRequest.onsuccess()
+          if (request.onsuccess) {
+            request.result = mockSource
+            request.onsuccess()
           }
         }, 0)
-        return mockRequest
+        return request
       })
 
       const result = await getAudioSource('test-id')
@@ -157,13 +159,14 @@ describe('audioRepository', () => {
 
     it('should return null when not found', async () => {
       mockObjectStore.get.mockImplementation(() => {
+        const request = createMockRequest()
         setTimeout(() => {
-          if (mockRequest.onsuccess) {
-            mockRequest.result = undefined
-            mockRequest.onsuccess()
+          if (request.onsuccess) {
+            request.result = undefined
+            request.onsuccess()
           }
         }, 0)
-        return mockRequest
+        return request
       })
 
       const result = await getAudioSource('non-existent')
@@ -175,13 +178,14 @@ describe('audioRepository', () => {
   describe('updateAudioSource', () => {
     it('should throw AudioNotFoundError when audio does not exist', async () => {
       mockObjectStore.get.mockImplementation(() => {
+        const request = createMockRequest()
         setTimeout(() => {
-          if (mockRequest.onsuccess) {
-            mockRequest.result = undefined
-            mockRequest.onsuccess()
+          if (request.onsuccess) {
+            request.result = undefined
+            request.onsuccess()
           }
         }, 0)
-        return mockRequest
+        return request
       })
 
       await expect(
@@ -208,13 +212,14 @@ describe('audioRepository', () => {
       }
 
       mockObjectStore.get.mockImplementation(() => {
+        const request = createMockRequest()
         setTimeout(() => {
-          if (mockRequest.onsuccess) {
-            mockRequest.result = mockSource
-            mockRequest.onsuccess()
+          if (request.onsuccess) {
+            request.result = mockSource
+            request.onsuccess()
           }
         }, 0)
-        return mockRequest
+        return request
       })
 
       // Mock transaction complete
@@ -229,13 +234,14 @@ describe('audioRepository', () => {
 
     it('should complete successfully when audio does not exist', async () => {
       mockObjectStore.get.mockImplementation(() => {
+        const request = createMockRequest()
         setTimeout(() => {
-          if (mockRequest.onsuccess) {
-            mockRequest.result = undefined
-            mockRequest.onsuccess()
+          if (request.onsuccess) {
+            request.result = undefined
+            request.onsuccess()
           }
         }, 0)
-        return mockRequest
+        return request
       })
 
       // Mock transaction complete
@@ -282,38 +288,33 @@ describe('audioRepository', () => {
         },
       ]
 
-      let cursorIndex = 0
       mockIndex.openCursor.mockImplementation(() => {
-        const request = { ...mockRequest }
+        const request = createMockRequest()
+        let cursorIndex = 0
+
         setTimeout(() => {
-          if (request.onsuccess) {
+          if (!request.onsuccess) return
+
+          const advanceCursor = () => {
             if (cursorIndex < mockSources.length) {
               request.result = {
                 value: mockSources[cursorIndex],
                 continue: () => {
                   cursorIndex++
-                  if (request.onsuccess) {
-                    if (cursorIndex < mockSources.length) {
-                      // @ts-expect-error - mocking cursor
-                      request.result = {
-                        value: mockSources[cursorIndex],
-                        continue: () => {},
-                      }
-                    } else {
-                      // @ts-expect-error - mocking cursor end
-                      request.result = null
-                    }
-                    request.onsuccess()
-                  }
+                  setTimeout(advanceCursor, 0)
                 },
               }
             } else {
               request.result = null
             }
-            cursorIndex++
-            request.onsuccess()
+            if (request.onsuccess) {
+              request.onsuccess()
+            }
           }
+
+          advanceCursor()
         }, 0)
+
         return request
       })
 
@@ -344,30 +345,33 @@ describe('audioRepository', () => {
         },
       ]
 
-      let cursorIndex = 0
       mockIndex.openCursor.mockImplementation(() => {
-        const request = { ...mockRequest }
+        const request = createMockRequest()
+        let cursorIndex = 0
+
         setTimeout(() => {
-          if (request.onsuccess) {
+          if (!request.onsuccess) return
+
+          const advanceCursor = () => {
             if (cursorIndex < mockSources.length) {
               request.result = {
                 value: mockSources[cursorIndex],
                 continue: () => {
                   cursorIndex++
-                  // @ts-expect-error - mocking cursor end
-                  request.result = null
-                  if (request.onsuccess) {
-                    request.onsuccess()
-                  }
+                  setTimeout(advanceCursor, 0)
                 },
               }
-              cursorIndex++
             } else {
               request.result = null
             }
-            request.onsuccess()
+            if (request.onsuccess) {
+              request.onsuccess()
+            }
           }
+
+          advanceCursor()
         }, 0)
+
         return request
       })
 
@@ -409,38 +413,33 @@ describe('audioRepository', () => {
         },
       ]
 
-      let cursorIndex = 0
       mockIndex.openCursor.mockImplementation(() => {
-        const request = { ...mockRequest }
+        const request = createMockRequest()
+        let cursorIndex = 0
+
         setTimeout(() => {
-          if (request.onsuccess) {
+          if (!request.onsuccess) return
+
+          const advanceCursor = () => {
             if (cursorIndex < mockSources.length) {
               request.result = {
                 value: mockSources[cursorIndex],
                 continue: () => {
                   cursorIndex++
-                  if (request.onsuccess) {
-                    if (cursorIndex < mockSources.length) {
-                      // @ts-expect-error - mocking cursor
-                      request.result = {
-                        value: mockSources[cursorIndex],
-                        continue: () => {},
-                      }
-                    } else {
-                      // @ts-expect-error - mocking cursor end
-                      request.result = null
-                    }
-                    request.onsuccess()
-                  }
+                  setTimeout(advanceCursor, 0)
                 },
               }
             } else {
               request.result = null
             }
-            cursorIndex++
-            request.onsuccess()
+            if (request.onsuccess) {
+              request.onsuccess()
+            }
           }
+
+          advanceCursor()
         }, 0)
+
         return request
       })
 

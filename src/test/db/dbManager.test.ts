@@ -8,10 +8,11 @@ import {
   getStorageUsage,
   hasEnoughStorage,
   DatabaseError,
-  QuotaExceededError,
-  VersionError,
 } from '../../db/dbManager'
 import { DB_NAME, DB_VERSION } from '../../db/schema'
+
+// Declare global for TypeScript
+declare const global: typeof globalThis
 
 // Mock indexedDB
 const mockIndexedDB = {

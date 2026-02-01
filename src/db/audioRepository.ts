@@ -22,6 +22,9 @@ import {
   hasEnoughStorage,
 } from './dbManager'
 
+// Export QuotaExceededError for consumers
+export { QuotaExceededError }
+
 // ==================== 配置常量 ====================
 
 /** 分片大小：5MB */
